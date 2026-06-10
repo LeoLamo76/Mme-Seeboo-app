@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vocabulary Scene Builder</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand" type="button" data-action="menu" aria-label="Return to main menu">
+          <span class="brand-mark">V</span>
+          <span>
+            <strong>Vocabulary Scenes</strong>
+            <small>Visual word practice</small>
+          </span>
+        </button>
+        <nav class="top-actions">
+          <button class="ghost-button" type="button" data-action="builder">Teacher Builder</button>
+          <button class="ghost-button" type="button" data-action="game-menu">Student Play</button>
+        </nav>
+      </header>
+
+      <main>
+        <section class="screen active" id="menu-screen" aria-labelledby="menu-title">
+          <div class="menu-grid">
+            <div class="intro-panel">
+              <p class="eyebrow">Classroom vocabulary game</p>
+              <h1 id="menu-title">Match words to real objects in a scene.</h1>
+              <p>
+                Teachers upload one picture, trace object shapes, and students play by finding each word in the image.
+              </p>
+              <div class="button-row">
+                <button class="primary-button" type="button" data-action="builder">Create Activity</button>
+                <button class="secondary-button" type="button" data-action="game-menu">Play Activity</button>
+              </div>
+            </div>
+
+            <div class="activity-panel">
+              <div class="panel-heading">
+                <h2>Saved Activities</h2>
+                <span id="activity-count">0</span>
+              </div>
+              <div id="activity-list" class="activity-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="builder-screen" aria-labelledby="builder-title">
+          <div class="builder-layout">
+            <aside class="builder-sidebar">
+              <div>
+                <p class="eyebrow">Teacher builder</p>
+                <h1 id="builder-title">Create an activity</h1>
+              </div>
+
+              <label class="field">
+                <span>Activity name</span>
+                <input id="activity-name" type="text" placeholder="Kitchen vocabulary">
+              </label>
+
+              <label class="field">
+                <span>Scene image</span>
+                <input id="image-upload" type="file" accept="image/*">
+              </label>
+
+              <label class="field">
+                <span>Vocabulary words</span>
+                <textarea id="word-input" rows="9" placeholder="refrigerator&#10;sink&#10;chair&#10;table&#10;stove"></textarea>
+              </label>
+
+              <div class="button-row compact">
+                <button class="secondary-button" type="button" id="load-words">Load Words</button>
+                <button class="ghost-button" type="button" id="undo-point">Undo Point</button>
+                <button class="ghost-button" type="button" id="clear-selected">Clear Selected</button>
+                <button class="ghost-button" type="button" id="clear-builder">Clear</button>
+              </div>
+
+              <div class="word-box">
+                <div class="panel-heading">
+                  <h2>Words</h2>
+                  <span id="mapped-count">0 mapped</span>
+                </div>
+                <div id="builder-word-list" class="word-list"></div>
+              </div>
+
+              <button class="primary-button full" type="button" id="save-activity">Save Activity</button>
+              <p class="helper-text">Click around each object to trace a polygon, then click the first point to close it.</p>
+            </aside>
+
+            <section class="workspace-panel" aria-label="Image mapping workspace">
+              <div class="workspace-toolbar">
+                <strong id="selected-word-label">No word selected</strong>
+                <span id="builder-status">Upload an image and load words to begin.</span>
+              </div>
+              <div class="image-stage empty" id="builder-stage" tabindex="0">
+                <img id="builder-image" alt="" draggable="false">
+                <div id="builder-overlays" class="overlay-layer"></div>
+                <p id="empty-builder">Your image will appear here.</p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen" id="game-menu-screen" aria-labelledby="game-menu-title">
+          <div class="choose-panel">
+            <p class="eyebrow">Student play</p>
+            <h1 id="game-menu-title">Choose an activity</h1>
+            <div id="play-activity-list" class="activity-list large"></div>
+          </div>
+        </section>
+
+        <section class="screen" id="game-screen" aria-labelledby="game-title">
+          <div class="game-layout">
+            <aside class="game-sidebar">
+              <p class="eyebrow" id="game-activity-name">Find the object</p>
+              <h1 id="game-title">Ready?</h1>
+              <div class="score-grid">
+                <div><span>Score</span><strong id="score-value">0</strong></div>
+                <div><span>Word</span><strong id="progress-value">0/0</strong></div>
+              </div>
+              <p id="feedback" class="feedback">Press Start to begin.</p>
+              <div class="button-column">
+                <button class="primary-button" type="button" id="start-game">Start</button>
+                <button class="secondary-button" type="button" id="show-me">Show Me</button>
+                <button class="ghost-button" type="button" data-action="game-menu">Choose Another Activity</button>
+              </div>
+            </aside>
+
+            <section class="workspace-panel" aria-label="Student game image">
+              <div class="image-stage" id="game-stage">
+                <img id="game-image" alt="" draggable="false">
+                <div id="game-overlays" class="overlay-layer"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen" id="result-screen" aria-labelledby="result-title">
+          <div class="result-panel">
+            <p class="eyebrow">Activity complete</p>
+            <h1 id="result-title">Great work</h1>
+            <div class="result-score" id="result-score">0%</div>
+            <p id="result-detail">You found 0 of 0 words.</p>
+            <div class="button-row center">
+              <button class="primary-button" type="button" id="play-again">Play Again</button>
+              <button class="secondary-button" type="button" data-action="game-menu">Choose Another Activity</button>
+              <button class="ghost-button" type="button" data-action="menu">Return to Menu</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
