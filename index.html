@@ -9,7 +9,7 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <button class="brand" type="button" data-action="menu" aria-label="Return to main menu">
+        <button class="brand" type="button" data-action="home" aria-label="Return to home">
           <span class="brand-mark">V</span>
           <span>
             <strong>Vocabulary Scenes</strong>
@@ -17,33 +17,76 @@
           </span>
         </button>
         <nav class="top-actions">
-          <button class="ghost-button" type="button" data-action="builder">Teacher Builder</button>
-          <button class="ghost-button" type="button" data-action="game-menu">Student Play</button>
+          <button class="ghost-button" type="button" data-action="home">Home</button>
         </nav>
       </header>
 
       <main>
         <section class="screen active" id="menu-screen" aria-labelledby="menu-title">
-          <div class="menu-grid">
-            <div class="intro-panel">
+          <div class="role-layout">
+            <div class="landing-panel">
               <p class="eyebrow">Classroom vocabulary game</p>
-              <h1 id="menu-title">Match words to real objects in a scene.</h1>
+              <h1 id="menu-title">Choose who is using the app.</h1>
               <p>
-                Teachers upload one picture, trace object shapes, and students play by finding each word in the image.
+                Students jump straight into activities. Teachers enter through a private builder flow for creating and managing scenes.
               </p>
-              <div class="button-row">
-                <button class="primary-button" type="button" data-action="builder">Create Activity</button>
-                <button class="secondary-button" type="button" data-action="game-menu">Play Activity</button>
-              </div>
             </div>
 
-            <div class="activity-panel">
+            <div class="role-grid">
+              <button class="role-card student" type="button" data-action="student-entry">
+                <span class="role-icon">S</span>
+                <span class="role-copy">
+                  <strong>Student</strong>
+                  <small>Pick a level and start playing right away.</small>
+                </span>
+              </button>
+
+              <button class="role-card teacher" type="button" data-action="teacher-entry">
+                <span class="role-icon">T</span>
+                <span class="role-copy">
+                  <strong>Teacher</strong>
+                  <small>Enter the builder flow and manage vocabulary scenes.</small>
+                </span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="teacher-gate-screen" aria-labelledby="teacher-gate-title">
+          <div class="teacher-gate-layout">
+            <section class="teacher-access-panel">
+              <p class="eyebrow">Teacher access</p>
+              <h1 id="teacher-gate-title">Teacher sign-in</h1>
+              <p class="support-copy">
+                This is a placeholder for the real email login. For now, we can use this screen as the teacher entry step until the final email is confirmed.
+              </p>
+
+              <label class="field">
+                <span>Teacher email</span>
+                <input id="teacher-email" type="email" placeholder="teacher@example.com">
+              </label>
+
+              <div class="notice-card">
+                <strong>Temporary setup</strong>
+                <p>No real login is enforced yet. This button simply moves into the builder flow.</p>
+              </div>
+
+              <div class="button-column">
+                <button class="primary-button" type="button" id="teacher-continue">Continue to Teacher Builder</button>
+                <button class="ghost-button" type="button" data-action="home">Back to Home</button>
+              </div>
+            </section>
+
+            <section class="teacher-library-panel">
               <div class="panel-heading">
-                <h2>Saved Activities</h2>
+                <div>
+                  <p class="eyebrow">Teacher library</p>
+                  <h2>Saved activities</h2>
+                </div>
                 <span id="activity-count">0</span>
               </div>
               <div id="activity-list" class="activity-list"></div>
-            </div>
+            </section>
           </div>
         </section>
 
@@ -104,10 +147,30 @@
         </section>
 
         <section class="screen" id="game-menu-screen" aria-labelledby="game-menu-title">
-          <div class="choose-panel">
-            <p class="eyebrow">Student play</p>
-            <h1 id="game-menu-title">Choose an activity</h1>
-            <div id="play-activity-list" class="activity-list large"></div>
+          <div class="student-library-layout">
+            <section class="student-library-hero">
+              <div>
+                <p class="eyebrow">Student play</p>
+                <h1 id="game-menu-title">Choose a level</h1>
+                <p class="support-copy">Find a scene fast, then jump straight into the activity.</p>
+              </div>
+              <div class="student-library-stats">
+                <span>Available levels</span>
+                <strong id="student-activity-count">0</strong>
+              </div>
+            </section>
+
+            <section class="student-library-panel">
+              <div class="student-library-toolbar">
+                <label class="search-field" for="student-search">
+                  <span>Search levels</span>
+                  <input id="student-search" type="search" placeholder="Search by activity name">
+                </label>
+                <p id="student-library-status" class="library-status">Browse all saved levels.</p>
+              </div>
+
+              <div id="play-activity-list" class="student-activity-grid"></div>
+            </section>
           </div>
         </section>
 
@@ -120,9 +183,8 @@
                 <div><span>Score</span><strong id="score-value">0</strong></div>
                 <div><span>Word</span><strong id="progress-value">0/0</strong></div>
               </div>
-              <p id="feedback" class="feedback">Press Start to begin.</p>
+              <p id="feedback" class="feedback">Click the matching object in the picture.</p>
               <div class="button-column">
-                <button class="primary-button" type="button" id="start-game">Start</button>
                 <button class="secondary-button" type="button" id="show-me">Show Me</button>
                 <button class="ghost-button" type="button" data-action="game-menu">Choose Another Activity</button>
               </div>

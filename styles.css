@@ -160,14 +160,238 @@ main {
   margin: 0 auto;
 }
 
-.menu-grid {
-  grid-template-columns: minmax(0, 1fr) 420px;
-  align-items: stretch;
-}
-
 .builder-layout,
 .game-layout {
   grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.role-layout,
+.teacher-gate-layout,
+.student-library-layout {
+  display: grid;
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.landing-panel,
+.teacher-access-panel,
+.teacher-library-panel,
+.student-library-hero,
+.student-library-panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.role-layout {
+  align-items: start;
+}
+
+.landing-panel {
+  padding: clamp(24px, 5vw, 48px);
+}
+
+.landing-panel h1 {
+  margin: 8px 0 14px;
+  max-width: 700px;
+  font-size: clamp(38px, 6vw, 72px);
+  line-height: 1;
+}
+
+.landing-panel p,
+.support-copy {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.role-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  text-align: left;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.role-card:hover {
+  transform: translateY(-2px);
+  border-color: #bfd0ea;
+  box-shadow: 0 24px 56px rgba(23, 33, 43, 0.16);
+}
+
+.role-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.role-card.student .role-icon {
+  background: #2563eb;
+}
+
+.role-card.teacher .role-icon {
+  background: #0f766e;
+}
+
+.role-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.role-copy strong {
+  font-size: 26px;
+}
+
+.role-copy small {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.teacher-gate-layout {
+  grid-template-columns: 380px minmax(0, 1fr);
+  align-items: start;
+}
+
+.student-library-layout {
+  max-width: 1280px;
+}
+
+.teacher-access-panel,
+.teacher-library-panel,
+.student-library-panel {
+  padding: 24px;
+}
+
+.teacher-access-panel h1,
+.teacher-library-panel h2 {
+  margin: 8px 0 12px;
+}
+
+.student-library-hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 32px;
+}
+
+.student-library-hero h1 {
+  margin: 8px 0 12px;
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1;
+}
+
+.student-library-stats {
+  min-width: 160px;
+  padding: 18px 20px;
+  border: 1px solid #d8e3f5;
+  border-radius: 8px;
+  background: #f7faff;
+}
+
+.student-library-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.student-library-stats strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.student-library-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.search-field {
+  display: grid;
+  gap: 8px;
+  min-width: min(420px, 100%);
+}
+
+.search-field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.search-field input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.library-status {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: right;
+}
+
+.student-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.library-empty {
+  margin: 0;
+  padding: 32px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+  background: #fbfcfd;
+}
+
+.notice-card {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 22px;
+  padding: 16px;
+  border: 1px solid #d8e3f5;
+  border-radius: 8px;
+  background: #f6f9ff;
+}
+
+.notice-card p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .intro-panel,
@@ -269,6 +493,54 @@ main {
 
 .activity-card p {
   margin: 0;
+}
+
+.activity-card.play-card {
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
+  min-height: 100%;
+}
+
+.activity-card-media {
+  aspect-ratio: 16 / 10;
+  background: #dfe8ee;
+  overflow: hidden;
+}
+
+.activity-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.activity-card-body {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.play-card .activity-card-body {
+  gap: 10px;
+  padding: 16px;
+}
+
+.play-card-meta {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eff4ff;
+  color: #3157b7;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.play-card .activity-card-actions {
+  margin-top: 2px;
 }
 
 .activity-card-actions {
@@ -500,15 +772,25 @@ main {
 }
 
 @media (max-width: 980px) {
-  .menu-grid,
   .builder-layout,
-  .game-layout {
+  .game-layout,
+  .teacher-gate-layout {
     grid-template-columns: 1fr;
+  }
+
+  .student-library-hero,
+  .student-library-toolbar {
+    align-items: start;
+    flex-direction: column;
   }
 
   .builder-sidebar,
   .game-sidebar {
     order: -1;
+  }
+
+  .role-grid {
+    grid-template-columns: 1fr;
   }
 
   .image-stage {
@@ -543,6 +825,11 @@ main {
   .workspace-toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .student-library-panel,
+  .student-library-hero {
+    padding: 18px;
   }
 
   .image-stage {

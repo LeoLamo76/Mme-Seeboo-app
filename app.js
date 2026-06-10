@@ -1,17 +1,21 @@
 const SUPABASE_URL = "https://znxqhbfdfejuuaxjnaso.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpueHFoYmZkZmVqdXVheGpuYXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwOTA4MjUsImV4cCI6MjA5NjY2NjgyNX0.VVRfSPrbMP99ybMSxxHtDQ_yn1k_vxCxBn8cBOHeKV8";
+const SUPABASE_IMAGE_BUCKET = "scene-images";
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+const supabaseClient = window.supabase?.createClient
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
-const STORAGE_KEY = "vocabulary-scene-activities";
 const state = {
   activities: [],
+  isLoadingActivities: false,
+  activitiesError: "",
+  studentQuery: "",
   builder: {
     id: null,
     image: "",
+    imageUrl: "",
+    imageFile: null,
     words: [],
     selectedWord: "",
     pendingPoint: null,
@@ -23,13 +27,13 @@ const state = {
     index: 0,
     score: 0,
     answered: false,
-    usedShowMe: false,
-    started: false
+    usedShowMe: false
   }
 };
 
 const screens = {
   menu: document.querySelector("#menu-screen"),
+  teacherGate: document.querySelector("#teacher-gate-screen"),
   builder: document.querySelector("#builder-screen"),
   gameMenu: document.querySelector("#game-menu-screen"),
   game: document.querySelector("#game-screen"),
@@ -40,6 +44,11 @@ const els = {
   activityCount: document.querySelector("#activity-count"),
   activityList: document.querySelector("#activity-list"),
   playActivityList: document.querySelector("#play-activity-list"),
+  studentSearch: document.querySelector("#student-search"),
+  studentActivityCount: document.querySelector("#student-activity-count"),
+  studentLibraryStatus: document.querySelector("#student-library-status"),
+  teacherEmail: document.querySelector("#teacher-email"),
+  teacherContinue: document.querySelector("#teacher-continue"),
   activityName: document.querySelector("#activity-name"),
   imageUpload: document.querySelector("#image-upload"),
   wordInput: document.querySelector("#word-input"),
@@ -61,7 +70,6 @@ const els = {
   scoreValue: document.querySelector("#score-value"),
   progressValue: document.querySelector("#progress-value"),
   feedback: document.querySelector("#feedback"),
-  startGame: document.querySelector("#start-game"),
   showMe: document.querySelector("#show-me"),
   gameStage: document.querySelector("#game-stage"),
   gameImage: document.querySelector("#game-image"),
@@ -71,37 +79,23 @@ const els = {
   playAgain: document.querySelector("#play-again")
 };
 
-function loadActivities() {
-  try {
-    state.activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]").map(normalizeActivity);
-  } catch {
-    state.activities = [];
-  }
-}
-
-function persistActivities() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.activities));
-}
-
-async function testSupabase() {
-  const { data, error } = await supabase
-    .from("activities")
-    .select("*");
-
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
-}
-
-testSupabase();
-
 function normalizeActivity(activity) {
   return {
-    ...activity,
-    words: activity.words.map((word) => ({
+    id: activity.id,
+    name: activity.name,
+    image: activity.image_url,
+    words: (activity.words_json || []).map((word) => ({
       text: word.text,
       targets: normalizeTargets(word)
     }))
   };
+}
+
+function requireSupabase() {
+  if (!supabaseClient) {
+    throw new Error("Supabase client failed to load. Refresh the page and try again.");
+  }
+  return supabaseClient;
 }
 
 function normalizeTargets(word) {
@@ -146,7 +140,7 @@ function markerToPolygon(marker) {
 function showScreen(name) {
   Object.values(screens).forEach((screen) => screen.classList.remove("active"));
   screens[name].classList.add("active");
-  if (name === "menu" || name === "gameMenu") renderActivityLists();
+  if (name === "menu" || name === "teacherGate" || name === "gameMenu") renderActivityLists();
 }
 
 function parseWords(text) {
@@ -163,31 +157,99 @@ function setBuilderStatus(message) {
 
 function renderActivityLists() {
   els.activityCount.textContent = String(state.activities.length);
-  renderActivityList(els.activityList, false);
-  renderActivityList(els.playActivityList, true);
+  const filteredStudentActivities = getFilteredStudentActivities();
+  els.studentActivityCount.textContent = String(filteredStudentActivities.length);
+  renderActivityList(els.activityList, state.activities, false);
+  renderActivityList(els.playActivityList, filteredStudentActivities, true);
+  updateStudentLibraryStatus(filteredStudentActivities.length);
 }
 
-function renderActivityList(target, playOnly) {
+function getFilteredStudentActivities() {
+  const query = state.studentQuery.trim().toLowerCase();
+  if (!query) return [...state.activities];
+  return state.activities.filter((activity) => activity.name.toLowerCase().includes(query));
+}
+
+function updateStudentLibraryStatus(matchCount) {
+  if (state.isLoadingActivities) {
+    els.studentLibraryStatus.textContent = "Loading levels...";
+    return;
+  }
+
+  if (state.activitiesError) {
+    els.studentLibraryStatus.textContent = state.activitiesError;
+    return;
+  }
+
+  if (!state.studentQuery.trim()) {
+    els.studentLibraryStatus.textContent = `Browse ${state.activities.length} saved level${state.activities.length === 1 ? "" : "s"}.`;
+    return;
+  }
+
+  els.studentLibraryStatus.textContent = `${matchCount} match${matchCount === 1 ? "" : "es"} for "${state.studentQuery.trim()}".`;
+}
+
+function renderActivityList(target, activities, playOnly) {
   target.innerHTML = "";
 
-  if (!state.activities.length) {
+  if (state.isLoadingActivities) {
+    const loading = document.createElement("p");
+    loading.className = playOnly ? "library-empty" : "helper-text";
+    loading.textContent = "Loading activities...";
+    target.append(loading);
+    return;
+  }
+
+  if (state.activitiesError) {
+    const error = document.createElement("p");
+    error.className = playOnly ? "library-empty" : "helper-text";
+    error.textContent = state.activitiesError;
+    target.append(error);
+    return;
+  }
+
+  if (!activities.length) {
     const empty = document.createElement("p");
-    empty.className = "helper-text";
-    empty.textContent = "No activities saved yet.";
+    empty.className = playOnly ? "library-empty" : "helper-text";
+    empty.textContent = playOnly && state.studentQuery.trim()
+      ? "No levels match that search."
+      : "No activities saved yet.";
     target.append(empty);
     return;
   }
 
-  state.activities.forEach((activity) => {
+  activities.forEach((activity) => {
     const card = document.createElement("article");
-    card.className = "activity-card";
-    card.innerHTML = `
-      <strong>${escapeHtml(activity.name)}</strong>
-      <p>${activity.words.length} words mapped</p>
-      <div class="activity-card-actions"></div>
-    `;
+    card.className = `activity-card ${playOnly ? "play-card" : ""}`.trim();
 
-    const actions = card.querySelector(".activity-card-actions");
+    if (activity.image) {
+      const media = document.createElement("div");
+      media.className = "activity-card-media";
+      const image = document.createElement("img");
+      image.src = activity.image;
+      image.alt = "";
+      media.append(image);
+      card.append(media);
+    }
+
+    const content = document.createElement("div");
+    content.className = "activity-card-body";
+
+    const title = document.createElement("strong");
+    title.textContent = activity.name;
+    const detail = document.createElement("p");
+    detail.textContent = `${activity.words.length} words mapped`;
+    if (playOnly) {
+      const meta = document.createElement("span");
+      meta.className = "play-card-meta";
+      meta.textContent = `${activity.words.length} words`;
+      content.append(meta);
+    }
+
+    content.append(title, detail);
+
+    const actions = document.createElement("div");
+    actions.className = "activity-card-actions";
     actions.append(makeButton("Play", "mini-button", () => openGame(activity.id)));
     if (!playOnly) {
       actions.append(
@@ -195,6 +257,8 @@ function renderActivityList(target, playOnly) {
         makeButton("Delete", "mini-button danger", () => deleteActivity(activity.id))
       );
     }
+    content.append(actions);
+    card.append(content);
     target.append(card);
   });
 }
@@ -209,7 +273,7 @@ function makeButton(label, className, onClick) {
 }
 
 function resetBuilder() {
-  state.builder = { id: null, image: "", words: [], selectedWord: "", pendingPoint: null, draftPolygon: [] };
+  state.builder = { id: null, image: "", imageUrl: "", imageFile: null, words: [], selectedWord: "", pendingPoint: null, draftPolygon: [] };
   els.activityName.value = "";
   els.imageUpload.value = "";
   els.wordInput.value = "";
@@ -221,6 +285,21 @@ function resetBuilder() {
   setBuilderStatus("Upload an image and load words to begin.");
 }
 
+function openTeacherEntry() {
+  showScreen("teacherGate");
+}
+
+function openStudentEntry() {
+  state.studentQuery = "";
+  els.studentSearch.value = "";
+  showScreen("gameMenu");
+}
+
+function openTeacherBuilder() {
+  resetBuilder();
+  showScreen("builder");
+}
+
 function editActivity(id) {
   const activity = state.activities.find((item) => item.id === id);
   if (!activity) return;
@@ -228,6 +307,8 @@ function editActivity(id) {
   state.builder = {
     id: activity.id,
     image: activity.image,
+    imageUrl: activity.image,
+    imageFile: null,
     words: structuredClone(activity.words),
     selectedWord: activity.words[0]?.text || "",
     pendingPoint: null,
@@ -247,14 +328,14 @@ function deleteActivity(id) {
   if (!activity) return;
 
   if (confirm(`Delete "${activity.name}"?`)) {
-    state.activities = state.activities.filter((item) => item.id !== id);
-    persistActivities();
-    renderActivityLists();
+    deleteActivityRemote(id);
   }
 }
 
-function setBuilderImage(src) {
+function setBuilderImage(src, imageUrl = state.builder.imageUrl, imageFile = state.builder.imageFile) {
   state.builder.image = src;
+  state.builder.imageUrl = imageUrl;
+  state.builder.imageFile = imageFile;
   els.builderImage.src = src;
   els.emptyBuilder.classList.add("hidden");
   els.builderStage.classList.remove("empty");
@@ -471,6 +552,89 @@ function undoPolygonPoint() {
 }
 
 function saveActivity() {
+  saveActivityRemote();
+}
+
+async function uploadSceneImage(file) {
+  const client = requireSupabase();
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const fileName = `${Date.now()}-${safeName}`;
+  const filePath = `activities/${fileName}`;
+  const { error: uploadError } = await client.storage
+    .from(SUPABASE_IMAGE_BUCKET)
+    .upload(filePath, file, { upsert: false });
+
+  if (uploadError) throw new Error(`Image upload failed for bucket "${SUPABASE_IMAGE_BUCKET}": ${uploadError.message}`);
+
+  const { data } = client.storage
+    .from(SUPABASE_IMAGE_BUCKET)
+    .getPublicUrl(filePath);
+
+  if (!data?.publicUrl) throw new Error("Image upload failed: no public URL returned.");
+  return data.publicUrl;
+}
+
+async function loadActivities() {
+  state.isLoadingActivities = true;
+  state.activitiesError = "";
+  renderActivityLists();
+
+  try {
+    const client = requireSupabase();
+    const { data, error } = await client
+      .from("activities")
+      .select("id, name, image_url, words_json, published, created_at")
+      .eq("published", true)
+      .order("created_at", { ascending: false });
+
+    state.isLoadingActivities = false;
+
+    if (error) {
+      state.activities = [];
+      state.activitiesError = `Could not load activities: ${error.message}`;
+      renderActivityLists();
+      return;
+    }
+
+    state.activities = (data || []).map(normalizeActivity);
+    renderActivityLists();
+  } catch (error) {
+    state.isLoadingActivities = false;
+    state.activities = [];
+    state.activitiesError = error.message || "Could not load activities.";
+    renderActivityLists();
+  }
+}
+
+async function persistActivities(activity) {
+  const client = requireSupabase();
+  const payload = {
+    name: activity.name,
+    image_url: activity.image,
+    words_json: activity.words,
+    published: true
+  };
+
+  if (activity.id) {
+    const { error } = await client
+      .from("activities")
+      .update(payload)
+      .eq("id", activity.id);
+    if (error) throw new Error(`Could not update activity: ${error.message}`);
+    return activity.id;
+  }
+
+  const { data, error } = await client
+    .from("activities")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (error) throw new Error(`Could not save activity: ${error.message}`);
+  return data.id;
+}
+
+async function saveActivityRemote() {
   const name = els.activityName.value.trim();
   const mapped = getMappedWords();
 
@@ -479,54 +643,92 @@ function saveActivity() {
   if (!state.builder.words.length) return alert("Please add vocabulary words.");
   if (mapped.length !== state.builder.words.length) return alert("Please finish at least one polygon for every word.");
 
-  const activity = {
-    id: state.builder.id || crypto.randomUUID(),
-    name,
-    image: state.builder.image,
-    words: structuredClone(state.builder.words)
-  };
+  const originalLabel = els.saveActivity.textContent;
+  els.saveActivity.disabled = true;
+  els.saveActivity.textContent = "Saving...";
+  setBuilderStatus("Saving activity...");
 
-  const existingIndex = state.activities.findIndex((item) => item.id === activity.id);
-  if (existingIndex >= 0) state.activities[existingIndex] = activity;
-  else state.activities.unshift(activity);
+  try {
+    let imageUrl = state.builder.imageUrl;
+    if (state.builder.imageFile) {
+      imageUrl = await uploadSceneImage(state.builder.imageFile);
+    }
 
-  persistActivities();
-  renderActivityLists();
-  showScreen("menu");
+    if (!imageUrl) throw new Error("Please upload an image before saving.");
+
+    const activity = {
+      id: state.builder.id,
+      name,
+      image: imageUrl,
+      words: structuredClone(state.builder.words)
+    };
+
+    activity.id = await persistActivities(activity);
+    state.builder.id = activity.id;
+    state.builder.imageUrl = imageUrl;
+    const normalizedActivity = normalizeActivity({
+      id: activity.id,
+      name: activity.name,
+      image_url: activity.image,
+      words_json: activity.words
+    });
+    const existingIndex = state.activities.findIndex((item) => item.id === normalizedActivity.id);
+    if (existingIndex >= 0) state.activities[existingIndex] = normalizedActivity;
+    else state.activities.unshift(normalizedActivity);
+    renderActivityLists();
+    showScreen("teacherGate");
+    setBuilderStatus("Activity saved.");
+    loadActivities();
+  } catch (error) {
+    const message = error.message || "Could not save activity.";
+    setBuilderStatus(message);
+    alert(message);
+  } finally {
+    els.saveActivity.disabled = false;
+    els.saveActivity.textContent = originalLabel;
+  }
+}
+
+async function deleteActivityRemote(id) {
+  try {
+    const client = requireSupabase();
+    const { error } = await client
+      .from("activities")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      state.activitiesError = `Could not delete activity: ${error.message}`;
+      renderActivityLists();
+      return;
+    }
+
+    state.activities = state.activities.filter((item) => item.id !== id);
+    renderActivityLists();
+  } catch (error) {
+    state.activitiesError = error.message || "Could not delete activity.";
+    renderActivityLists();
+  }
 }
 
 function openGame(id) {
   const activity = state.activities.find((item) => item.id === id);
   if (!activity) return;
 
-  const firstWord = activity.words[0]?.text || "Ready?";
   state.game = {
     activity,
     order: structuredClone(activity.words),
     index: 0,
     score: 0,
     answered: false,
-    usedShowMe: false,
-    started: false
+    usedShowMe: false
   };
 
   els.gameImage.src = activity.image;
   els.gameActivityName.textContent = activity.name;
-  els.gameTitle.textContent = firstWord;
-  els.feedback.textContent = "Press Start to begin.";
-  els.feedback.className = "feedback";
   updateGameStats();
   els.gameOverlays.innerHTML = "";
   showScreen("game");
-}
-
-function startGame() {
-  if (!state.game.activity) return;
-  state.game.index = 0;
-  state.game.score = 0;
-  state.game.answered = false;
-  state.game.usedShowMe = false;
-  state.game.started = true;
   showCurrentWord();
 }
 
@@ -581,7 +783,7 @@ function isTargetHit(point, target) {
 
 function handleGameClick(event) {
   const word = getCurrentWord();
-  if (!word || state.game.answered || !state.game.started) return;
+  if (!word || state.game.answered) return;
 
   const point = eventToPercent(event, els.gameStage, els.gameImage);
   const matchedTarget = word.targets.find((target) => isTargetHit(point, target));
@@ -609,7 +811,7 @@ function nextWord() {
 
 function showCurrentAnswer() {
   const word = getCurrentWord();
-  if (!word || !state.game.started) return;
+  if (!word) return;
 
   state.game.usedShowMe = true;
   state.game.answered = true;
@@ -650,12 +852,12 @@ document.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (!action) return;
 
-  if (action === "menu") showScreen("menu");
+  if (action === "home" || action === "menu") showScreen("menu");
+  if (action === "teacher-entry") openTeacherEntry();
+  if (action === "student-entry" || action === "game-menu") openStudentEntry();
   if (action === "builder") {
-    resetBuilder();
-    showScreen("builder");
+    openTeacherBuilder();
   }
-  if (action === "game-menu") showScreen("gameMenu");
 });
 
 document.addEventListener("keydown", (event) => {
@@ -674,7 +876,10 @@ els.imageUpload.addEventListener("change", () => {
   const file = els.imageUpload.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.addEventListener("load", () => setBuilderImage(reader.result));
+  reader.addEventListener("load", () => {
+    setBuilderImage(reader.result, state.builder.imageUrl, file);
+    setBuilderStatus("Image selected. It will upload to Supabase when you save the activity.");
+  });
   reader.readAsDataURL(file);
 });
 
@@ -698,7 +903,11 @@ els.undoPoint.addEventListener("click", () => {
 els.clearSelected.addEventListener("click", clearSelectedMarkers);
 els.clearBuilder.addEventListener("click", resetBuilder);
 els.saveActivity.addEventListener("click", saveActivity);
-els.startGame.addEventListener("click", startGame);
+els.studentSearch.addEventListener("input", () => {
+  state.studentQuery = els.studentSearch.value;
+  renderActivityLists();
+});
+els.teacherContinue.addEventListener("click", openTeacherBuilder);
 els.showMe.addEventListener("click", showCurrentAnswer);
 els.playAgain.addEventListener("click", () => {
   if (state.game.activity) openGame(state.game.activity.id);
@@ -729,4 +938,3 @@ window.addEventListener("resize", () => {
 });
 
 loadActivities();
-renderActivityLists();
