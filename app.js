@@ -1,3 +1,11 @@
+const SUPABASE_URL = "https://znxqhbfdfejuuaxjnaso.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpueHFoYmZkZmVqdXVheGpuYXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwOTA4MjUsImV4cCI6MjA5NjY2NjgyNX0.VVRfSPrbMP99ybMSxxHtDQ_yn1k_vxCxBn8cBOHeKV8";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
 const STORAGE_KEY = "vocabulary-scene-activities";
 const state = {
   activities: [],
@@ -74,6 +82,17 @@ function loadActivities() {
 function persistActivities() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.activities));
 }
+
+async function testSupabase() {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("*");
+
+  console.log("DATA:", data);
+  console.log("ERROR:", error);
+}
+
+testSupabase();
 
 function normalizeActivity(activity) {
   return {
