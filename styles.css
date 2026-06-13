@@ -425,9 +425,9 @@ main {
 
 .student-activity-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 320px));
-  gap: 14px;
-  justify-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 280px));
+  gap: 12px;
+  justify-content: center;
 }
 
 .library-empty {
@@ -561,11 +561,11 @@ main {
   padding: 0;
   gap: 0;
   min-height: 100%;
-  max-width: 320px;
+  max-width: 280px;
 }
 
 .activity-card-media {
-  aspect-ratio: 16 / 11;
+  aspect-ratio: 16 / 10;
   background: #dfe8ee;
   overflow: hidden;
 }
@@ -584,20 +584,20 @@ main {
 }
 
 .play-card .activity-card-body {
-  gap: 7px;
-  padding: 12px;
+  gap: 6px;
+  padding: 10px;
 }
 
 .play-card-meta {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  min-height: 26px;
-  padding: 0 9px;
+  min-height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   background: #eff4ff;
   color: #3157b7;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -609,7 +609,7 @@ main {
 }
 
 .play-card .activity-card-body strong {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.15;
 }
 
@@ -624,11 +624,11 @@ main {
 }
 
 .mini-button {
-  min-height: 34px;
+  min-height: 32px;
   border-radius: 7px;
   border: 1px solid var(--line);
   background: var(--soft);
-  padding: 0 10px;
+  padding: 0 9px;
   font-weight: 700;
 }
 
