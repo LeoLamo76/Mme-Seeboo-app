@@ -27,6 +27,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -79,7 +80,8 @@ button {
 .helper-text,
 .workspace-toolbar span,
 .activity-card p,
-.field span {
+.field span,
+.field small {
   color: var(--muted);
 }
 
@@ -108,7 +110,7 @@ button {
 .secondary-button,
 .ghost-button {
   min-height: 42px;
-  border-radius: 8px;
+  border-radius: 999px;
   border: 1px solid transparent;
   padding: 0 16px;
   font-weight: 700;
@@ -165,7 +167,7 @@ main {
   grid-template-columns: 360px minmax(0, 1fr);
 }
 
-.role-layout,
+.landing-shell,
 .teacher-gate-layout,
 .student-library-layout {
   display: grid;
@@ -174,104 +176,81 @@ main {
   margin: 0 auto;
 }
 
-.landing-panel,
+.landing-card,
 .teacher-access-panel,
-.teacher-library-panel,
 .student-library-hero,
 .student-library-panel {
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid #d2dbe8;
+  border-radius: 96px;
   box-shadow: var(--shadow);
 }
 
-.role-layout {
-  align-items: start;
+.student-library-hero,
+.student-library-panel {
+  border-radius: 24px;
 }
 
-.landing-panel {
-  padding: clamp(24px, 5vw, 48px);
-}
-
-.landing-panel h1 {
-  margin: 8px 0 14px;
-  max-width: 700px;
-  font-size: clamp(38px, 6vw, 72px);
-  line-height: 1;
-}
-
-.landing-panel p,
-.support-copy {
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.6;
-}
-
-.role-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.role-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-  padding: 28px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  box-shadow: var(--shadow);
-  color: var(--ink);
-  text-align: left;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
-}
-
-.role-card:hover {
-  transform: translateY(-2px);
-  border-color: #bfd0ea;
-  box-shadow: 0 24px 56px rgba(23, 33, 43, 0.16);
-}
-
-.role-icon {
-  display: grid;
+.landing-shell {
+  min-height: calc(100vh - 190px);
   place-items: center;
-  flex: 0 0 64px;
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-  font-size: 26px;
-  font-weight: 800;
-  color: #fff;
 }
 
-.role-card.student .role-icon {
-  background: #2563eb;
-}
-
-.role-card.teacher .role-icon {
-  background: #0f766e;
-}
-
-.role-copy {
+.landing-card {
   display: grid;
-  gap: 6px;
+  justify-items: center;
+  gap: 14px;
+  width: min(100%, 760px);
+  padding: clamp(40px, 6vw, 72px);
+  text-align: center;
 }
 
-.role-copy strong {
-  font-size: 26px;
+.landing-brand {
+  margin: 0;
+  color: var(--blue);
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 800;
 }
 
-.role-copy small {
+.landing-card h1 {
+  margin: 0;
+  max-width: 680px;
+  font-size: clamp(42px, 7vw, 72px);
+  line-height: 0.98;
+}
+
+.landing-subtitle,
+.support-copy {
+  margin: 0;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.5;
 }
 
+.landing-actions {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.landing-primary,
+.landing-secondary {
+  min-width: 240px;
+  min-height: 54px;
+  padding: 0 24px;
+  font-size: 18px;
+}
+
+.landing-divider {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .teacher-gate-layout {
-  grid-template-columns: 380px minmax(0, 1fr);
-  align-items: start;
+  min-height: calc(100vh - 170px);
+  place-items: center;
 }
 
 .student-library-layout {
@@ -279,94 +258,133 @@ main {
 }
 
 .teacher-access-panel,
-.teacher-library-panel,
 .student-library-panel {
   padding: 24px;
 }
 
-.teacher-access-panel h1,
-.teacher-library-panel h2 {
+.teacher-access-panel {
+  width: min(100%, 460px);
+  padding: 28px;
+}
+
+.teacher-access-panel h1 {
   margin: 8px 0 12px;
 }
 
 .student-library-hero {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px 32px;
+  padding: 18px 24px 16px;
 }
 
 .student-library-hero h1 {
-  margin: 8px 0 12px;
-  font-size: clamp(34px, 5vw, 56px);
-  line-height: 1;
-}
-
-.student-library-stats {
-  min-width: 160px;
-  padding: 18px 20px;
-  border: 1px solid #d8e3f5;
-  border-radius: 8px;
-  background: #f7faff;
-}
-
-.student-library-stats span {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.student-library-stats strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 34px;
-  line-height: 1;
+  margin: 4px 0 6px;
+  font-size: clamp(22px, 3vw, 32px);
+  line-height: 1.05;
 }
 
 .student-library-toolbar {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.search-field {
+.student-filter-row {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-field {
   display: grid;
   gap: 8px;
-  min-width: min(420px, 100%);
+  min-width: 0;
 }
 
-.search-field span {
+.filter-field:first-child {
+  width: min(280px, 100%);
+}
+
+.filter-field:last-child {
+  flex: 1;
+}
+
+.filter-field span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 
-.search-field input {
+.filter-pill {
   width: 100%;
-  min-height: 48px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0 14px;
-  background: #fff;
+  min-height: 50px;
+  border: 1px solid #d8e3f5;
+  border-radius: 999px;
+  padding: 0 18px;
+  background: #f9fbff;
   color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.filter-pill:focus {
+  outline: none;
+  border-color: #9fbdfc;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.filter-field select.filter-pill {
+  appearance: none;
+  padding-right: 48px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6d7a8b 50%),
+    linear-gradient(135deg, #6d7a8b 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 2px),
+    calc(100% - 16px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.student-library-summary {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.student-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #d8e3f5;
+  border-radius: 999px;
+  background: #f7faff;
+  color: #546173;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-count-pill strong {
+  color: var(--ink);
+  font-size: 13px;
 }
 
 .library-status {
   margin: 0;
   color: var(--muted);
+  font-size: 14px;
   font-weight: 600;
   text-align: right;
 }
 
 .student-activity-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 320px));
+  gap: 14px;
+  justify-content: start;
 }
 
 .library-empty {
@@ -500,10 +518,11 @@ main {
   padding: 0;
   gap: 0;
   min-height: 100%;
+  max-width: 320px;
 }
 
 .activity-card-media {
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 11;
   background: #dfe8ee;
   overflow: hidden;
 }
@@ -522,21 +541,33 @@ main {
 }
 
 .play-card .activity-card-body {
-  gap: 10px;
-  padding: 16px;
+  gap: 7px;
+  padding: 12px;
 }
 
 .play-card-meta {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 26px;
+  padding: 0 9px;
   border-radius: 999px;
   background: #eff4ff;
   color: #3157b7;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+}
+
+.play-card-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.play-card .activity-card-body strong {
+  font-size: 16px;
+  line-height: 1.15;
 }
 
 .play-card .activity-card-actions {
@@ -571,6 +602,7 @@ main {
 }
 
 .field input,
+.field select,
 .field textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -695,6 +727,10 @@ main {
   display: none;
 }
 
+#new-category-field.hidden {
+  display: none;
+}
+
 #empty-builder {
   color: var(--muted);
   font-weight: 800;
@@ -784,13 +820,13 @@ main {
     flex-direction: column;
   }
 
+  .student-filter-row {
+    width: 100%;
+  }
+
   .builder-sidebar,
   .game-sidebar {
     order: -1;
-  }
-
-  .role-grid {
-    grid-template-columns: 1fr;
   }
 
   .image-stage {
@@ -830,6 +866,16 @@ main {
   .student-library-panel,
   .student-library-hero {
     padding: 18px;
+  }
+
+  .student-filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-field:first-child,
+  .filter-field:last-child {
+    width: 100%;
   }
 
   .image-stage {

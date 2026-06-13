@@ -11,6 +11,7 @@ const state = {
   isLoadingActivities: false,
   activitiesError: "",
   studentQuery: "",
+  studentNameQuery: "",
   builder: {
     id: null,
     image: "",
@@ -41,15 +42,18 @@ const screens = {
 };
 
 const els = {
-  activityCount: document.querySelector("#activity-count"),
-  activityList: document.querySelector("#activity-list"),
   playActivityList: document.querySelector("#play-activity-list"),
   studentSearch: document.querySelector("#student-search"),
+  studentNameSearch: document.querySelector("#student-name-search"),
   studentActivityCount: document.querySelector("#student-activity-count"),
   studentLibraryStatus: document.querySelector("#student-library-status"),
   teacherEmail: document.querySelector("#teacher-email"),
   teacherContinue: document.querySelector("#teacher-continue"),
   activityName: document.querySelector("#activity-name"),
+  activityCategory: document.querySelector("#activity-category"),
+  newCategoryField: document.querySelector("#new-category-field"),
+  newCategoryInput: document.querySelector("#new-category-input"),
+  activityDescription: document.querySelector("#activity-description"),
   imageUpload: document.querySelector("#image-upload"),
   wordInput: document.querySelector("#word-input"),
   loadWords: document.querySelector("#load-words"),
@@ -83,6 +87,8 @@ function normalizeActivity(activity) {
   return {
     id: activity.id,
     name: activity.name,
+    category: activity.category || "",
+    description: activity.description || "",
     image: activity.image_url,
     words: (activity.words_json || []).map((word) => ({
       text: word.text,
@@ -140,7 +146,7 @@ function markerToPolygon(marker) {
 function showScreen(name) {
   Object.values(screens).forEach((screen) => screen.classList.remove("active"));
   screens[name].classList.add("active");
-  if (name === "menu" || name === "teacherGate" || name === "gameMenu") renderActivityLists();
+  if (name === "gameMenu") renderActivityLists();
 }
 
 function parseWords(text) {
@@ -155,19 +161,100 @@ function setBuilderStatus(message) {
   els.builderStatus.textContent = message;
 }
 
+function getAvailableCategories() {
+  return [...new Set(
+    state.activities
+      .map((activity) => (activity.category || "").trim())
+      .filter(Boolean)
+  )].sort((left, right) => left.localeCompare(right));
+}
+
+function renderCategoryOptions(selectedValue = els.activityCategory.value) {
+  const categories = getAvailableCategories();
+  const currentValue = (selectedValue || "").trim();
+  els.activityCategory.innerHTML = "";
+
+  const noneOption = document.createElement("option");
+  noneOption.value = "";
+  noneOption.textContent = categories.length ? "No category" : "No categories yet";
+  els.activityCategory.append(noneOption);
+
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    els.activityCategory.append(option);
+  });
+
+  const createOption = document.createElement("option");
+  createOption.value = "__new__";
+  createOption.textContent = "Create new category";
+  els.activityCategory.append(createOption);
+
+  if (currentValue && !categories.includes(currentValue)) {
+    const currentOption = document.createElement("option");
+    currentOption.value = currentValue;
+    currentOption.textContent = currentValue;
+    els.activityCategory.append(currentOption);
+  }
+
+  els.activityCategory.value = currentValue;
+  if (els.activityCategory.value !== currentValue) {
+    els.activityCategory.value = "";
+  }
+  toggleNewCategoryField();
+}
+
+function renderStudentCategoryFilter() {
+  const categories = getAvailableCategories();
+  const currentValue = state.studentQuery.trim();
+  els.studentSearch.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = "All categories";
+  els.studentSearch.append(allOption);
+
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    els.studentSearch.append(option);
+  });
+
+  els.studentSearch.value = currentValue;
+  if (els.studentSearch.value !== currentValue) {
+    els.studentSearch.value = "";
+    state.studentQuery = "";
+  }
+}
+
+function toggleNewCategoryField() {
+  const shouldShow = els.activityCategory.value === "__new__";
+  els.newCategoryField.classList.toggle("hidden", !shouldShow);
+  if (!shouldShow) {
+    els.newCategoryInput.value = "";
+  }
+}
+
 function renderActivityLists() {
-  els.activityCount.textContent = String(state.activities.length);
   const filteredStudentActivities = getFilteredStudentActivities();
   els.studentActivityCount.textContent = String(filteredStudentActivities.length);
-  renderActivityList(els.activityList, state.activities, false);
   renderActivityList(els.playActivityList, filteredStudentActivities, true);
   updateStudentLibraryStatus(filteredStudentActivities.length);
+  renderCategoryOptions();
+  renderStudentCategoryFilter();
 }
 
 function getFilteredStudentActivities() {
-  const query = state.studentQuery.trim().toLowerCase();
-  if (!query) return [...state.activities];
-  return state.activities.filter((activity) => activity.name.toLowerCase().includes(query));
+  const categoryQuery = state.studentQuery.trim().toLowerCase();
+  const nameQuery = state.studentNameQuery.trim().toLowerCase();
+
+  return state.activities.filter((activity) => {
+    const matchesCategory = !categoryQuery || (activity.category || "").toLowerCase() === categoryQuery;
+    const matchesName = !nameQuery || activity.name.toLowerCase().includes(nameQuery);
+    return matchesCategory && matchesName;
+  });
 }
 
 function updateStudentLibraryStatus(matchCount) {
@@ -181,12 +268,18 @@ function updateStudentLibraryStatus(matchCount) {
     return;
   }
 
-  if (!state.studentQuery.trim()) {
+  const hasCategoryFilter = Boolean(state.studentQuery.trim());
+  const hasNameFilter = Boolean(state.studentNameQuery.trim());
+
+  if (!hasCategoryFilter && !hasNameFilter) {
     els.studentLibraryStatus.textContent = `Browse ${state.activities.length} saved level${state.activities.length === 1 ? "" : "s"}.`;
     return;
   }
 
-  els.studentLibraryStatus.textContent = `${matchCount} match${matchCount === 1 ? "" : "es"} for "${state.studentQuery.trim()}".`;
+  const filterParts = [];
+  if (hasCategoryFilter) filterParts.push(state.studentQuery.trim());
+  if (hasNameFilter) filterParts.push(state.studentNameQuery.trim());
+  els.studentLibraryStatus.textContent = `${matchCount} level${matchCount === 1 ? "" : "s"} for ${filterParts.join(" • ")}.`;
 }
 
 function renderActivityList(target, activities, playOnly) {
@@ -211,8 +304,8 @@ function renderActivityList(target, activities, playOnly) {
   if (!activities.length) {
     const empty = document.createElement("p");
     empty.className = playOnly ? "library-empty" : "helper-text";
-    empty.textContent = playOnly && state.studentQuery.trim()
-      ? "No levels match that search."
+    empty.textContent = playOnly && (state.studentQuery.trim() || state.studentNameQuery.trim())
+      ? "No levels match those filters."
       : "No activities saved yet.";
     target.append(empty);
     return;
@@ -240,6 +333,12 @@ function renderActivityList(target, activities, playOnly) {
     const detail = document.createElement("p");
     detail.textContent = `${activity.words.length} words mapped`;
     if (playOnly) {
+      if (activity.category) {
+        const categoryMeta = document.createElement("span");
+        categoryMeta.className = "play-card-meta";
+        categoryMeta.textContent = activity.category;
+        content.append(categoryMeta);
+      }
       const meta = document.createElement("span");
       meta.className = "play-card-meta";
       meta.textContent = `${activity.words.length} words`;
@@ -247,6 +346,13 @@ function renderActivityList(target, activities, playOnly) {
     }
 
     content.append(title, detail);
+
+    if (playOnly && activity.description) {
+      const description = document.createElement("p");
+      description.className = "play-card-description";
+      description.textContent = activity.description;
+      content.append(description);
+    }
 
     const actions = document.createElement("div");
     actions.className = "activity-card-actions";
@@ -275,11 +381,15 @@ function makeButton(label, className, onClick) {
 function resetBuilder() {
   state.builder = { id: null, image: "", imageUrl: "", imageFile: null, words: [], selectedWord: "", pendingPoint: null, draftPolygon: [] };
   els.activityName.value = "";
+  els.activityCategory.value = "";
+  els.newCategoryInput.value = "";
+  els.activityDescription.value = "";
   els.imageUpload.value = "";
   els.wordInput.value = "";
   els.builderImage.src = "";
   els.emptyBuilder.classList.remove("hidden");
   els.builderStage.classList.add("empty");
+  renderCategoryOptions("");
   renderBuilderWords();
   renderBuilderOverlays();
   setBuilderStatus("Upload an image and load words to begin.");
@@ -291,7 +401,9 @@ function openTeacherEntry() {
 
 function openStudentEntry() {
   state.studentQuery = "";
+  state.studentNameQuery = "";
   els.studentSearch.value = "";
+  els.studentNameSearch.value = "";
   showScreen("gameMenu");
 }
 
@@ -316,6 +428,9 @@ function editActivity(id) {
   };
 
   els.activityName.value = activity.name;
+  renderCategoryOptions(activity.category || "");
+  els.newCategoryInput.value = "";
+  els.activityDescription.value = activity.description || "";
   els.wordInput.value = activity.words.map((word) => word.text).join("\n");
   setBuilderImage(activity.image);
   renderBuilderWords();
@@ -583,7 +698,7 @@ async function loadActivities() {
     const client = requireSupabase();
     const { data, error } = await client
       .from("activities")
-      .select("id, name, image_url, words_json, published, created_at")
+      .select("*")
       .eq("published", true)
       .order("created_at", { ascending: false });
 
@@ -610,6 +725,8 @@ async function persistActivities(activity) {
   const client = requireSupabase();
   const payload = {
     name: activity.name,
+    category: activity.category,
+    description: activity.description,
     image_url: activity.image,
     words_json: activity.words,
     published: true
@@ -636,9 +753,15 @@ async function persistActivities(activity) {
 
 async function saveActivityRemote() {
   const name = els.activityName.value.trim();
+  const selectedCategory = els.activityCategory.value.trim();
+  const category = selectedCategory === "__new__"
+    ? els.newCategoryInput.value.trim()
+    : selectedCategory;
+  const description = els.activityDescription.value.trim();
   const mapped = getMappedWords();
 
   if (!name) return alert("Please name the activity.");
+  if (selectedCategory === "__new__" && !category) return alert("Please enter a new category name.");
   if (!state.builder.image) return alert("Please upload an image.");
   if (!state.builder.words.length) return alert("Please add vocabulary words.");
   if (mapped.length !== state.builder.words.length) return alert("Please finish at least one polygon for every word.");
@@ -659,6 +782,8 @@ async function saveActivityRemote() {
     const activity = {
       id: state.builder.id,
       name,
+      category,
+      description,
       image: imageUrl,
       words: structuredClone(state.builder.words)
     };
@@ -669,6 +794,8 @@ async function saveActivityRemote() {
     const normalizedActivity = normalizeActivity({
       id: activity.id,
       name: activity.name,
+      category: activity.category,
+      description: activity.description,
       image_url: activity.image,
       words_json: activity.words
     });
@@ -903,10 +1030,15 @@ els.undoPoint.addEventListener("click", () => {
 els.clearSelected.addEventListener("click", clearSelectedMarkers);
 els.clearBuilder.addEventListener("click", resetBuilder);
 els.saveActivity.addEventListener("click", saveActivity);
-els.studentSearch.addEventListener("input", () => {
+els.studentSearch.addEventListener("change", () => {
   state.studentQuery = els.studentSearch.value;
   renderActivityLists();
 });
+els.studentNameSearch.addEventListener("input", () => {
+  state.studentNameQuery = els.studentNameSearch.value;
+  renderActivityLists();
+});
+els.activityCategory.addEventListener("change", toggleNewCategoryField);
 els.teacherContinue.addEventListener("click", openTeacherBuilder);
 els.showMe.addEventListener("click", showCurrentAnswer);
 els.playAgain.addEventListener("click", () => {
