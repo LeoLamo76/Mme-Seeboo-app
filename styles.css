@@ -41,6 +41,7 @@ button {
 }
 
 .topbar {
+  position: sticky;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -48,10 +49,31 @@ button {
   padding: 16px 24px;
   background: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid var(--line);
-  position: sticky;
   top: 0;
   z-index: 10;
   backdrop-filter: blur(12px);
+}
+
+.topbar-side {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-left {
+  justify-content: flex-start;
+}
+
+.topbar-center {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  justify-content: center;
+  transform: translateX(-50%);
+}
+
+.topbar-right {
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .brand {
@@ -63,6 +85,21 @@ button {
   color: var(--ink);
   padding: 0;
   text-align: left;
+}
+
+.topbar-build {
+  min-width: 120px;
+}
+
+.topbar-home {
+  min-width: 106px;
+}
+
+.topbar-play {
+  min-width: 180px;
+  min-height: 48px;
+  padding: 0 28px;
+  font-size: 18px;
 }
 
 .brand-mark {
@@ -177,12 +214,18 @@ main {
 }
 
 .landing-card,
-.teacher-access-panel,
 .student-library-hero,
 .student-library-panel {
   background: var(--paper);
   border: 1px solid #d2dbe8;
   border-radius: 96px;
+  box-shadow: var(--shadow);
+}
+
+.teacher-access-panel {
+  background: var(--paper);
+  border: 1px solid #d2dbe8;
+  border-radius: 36px;
   box-shadow: var(--shadow);
 }
 
@@ -601,6 +644,10 @@ main {
   margin-top: 16px;
 }
 
+.category-field-stack {
+  position: relative;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -727,8 +774,8 @@ main {
   display: none;
 }
 
-#new-category-field.hidden {
-  display: none;
+#new-category-input::placeholder {
+  color: #98a4b3;
 }
 
 #empty-builder {
@@ -836,13 +883,26 @@ main {
 
 @media (max-width: 640px) {
   .topbar {
-    align-items: flex-start;
+    position: static;
+    align-items: stretch;
     flex-direction: column;
     padding: 14px;
   }
 
   main {
     padding: 14px;
+  }
+
+  .topbar-side,
+  .topbar-center,
+  .topbar-right {
+    position: static;
+    justify-content: center;
+    transform: none;
+  }
+
+  .topbar-left {
+    flex-wrap: wrap;
   }
 
   .top-actions,

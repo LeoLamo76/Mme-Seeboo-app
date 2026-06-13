@@ -4,22 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Vocabulary Scene Builder</title>
-    <link rel="stylesheet" href="styles.css?v=20260613-1710">
+    <link rel="stylesheet" href="styles.css?v=20260613-1758">
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
-        <button class="brand" type="button" data-action="home" aria-label="Return to home">
-          <span class="brand-mark">V</span>
-          <span>
-            <strong>Vocabulary Scenes</strong>
-            <small>Visual word practice</small>
-          </span>
-        </button>
-        <nav class="top-actions">
-          <button class="ghost-button" type="button" data-action="home">Home</button>
-        </nav>
-      </header>
+      <div id="site-header"></div>
 
       <main>
         <section class="screen active" id="menu-screen" aria-labelledby="menu-title">
@@ -85,14 +74,12 @@
 
               <label class="field">
                 <span>Category <small>(optional)</small></span>
-                <select id="activity-category">
-                  <option value="">No category</option>
-                </select>
-              </label>
-
-              <label class="field hidden" id="new-category-field">
-                <span>New category</span>
-                <input id="new-category-input" type="text" placeholder="Add a new category">
+                <div class="category-field-stack">
+                  <select id="activity-category">
+                    <option value="">No category</option>
+                  </select>
+                  <input id="new-category-input" class="hidden" type="text" placeholder="New category" aria-label="New category">
+                </div>
               </label>
 
               <label class="field">
@@ -216,7 +203,20 @@
       </main>
     </div>
 
+    <script>
+      fetch("partials/header.html?v=20260613-1758")
+        .then((response) => {
+          if (!response.ok) throw new Error("Header failed to load.");
+          return response.text();
+        })
+        .then((html) => {
+          document.querySelector("#site-header").innerHTML = html;
+        })
+        .catch(() => {
+          document.querySelector("#site-header").innerHTML = "";
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=20260613-1710"></script>
+    <script src="app.js?v=20260613-1758"></script>
   </body>
 </html>

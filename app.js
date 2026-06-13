@@ -51,7 +51,6 @@ const els = {
   teacherContinue: document.querySelector("#teacher-continue"),
   activityName: document.querySelector("#activity-name"),
   activityCategory: document.querySelector("#activity-category"),
-  newCategoryField: document.querySelector("#new-category-field"),
   newCategoryInput: document.querySelector("#new-category-input"),
   activityDescription: document.querySelector("#activity-description"),
   imageUpload: document.querySelector("#image-upload"),
@@ -191,16 +190,14 @@ function renderCategoryOptions(selectedValue = els.activityCategory.value) {
   createOption.textContent = "Create new category";
   els.activityCategory.append(createOption);
 
-  if (currentValue && !categories.includes(currentValue)) {
-    const currentOption = document.createElement("option");
-    currentOption.value = currentValue;
-    currentOption.textContent = currentValue;
-    els.activityCategory.append(currentOption);
-  }
-
-  els.activityCategory.value = currentValue;
-  if (els.activityCategory.value !== currentValue) {
-    els.activityCategory.value = "";
+  if (currentValue && !categories.includes(currentValue) && currentValue !== "__new__") {
+    els.activityCategory.value = "__new__";
+    els.newCategoryInput.value = currentValue;
+  } else {
+    els.activityCategory.value = currentValue;
+    if (els.activityCategory.value !== currentValue) {
+      els.activityCategory.value = "";
+    }
   }
   toggleNewCategoryField();
 }
@@ -231,10 +228,14 @@ function renderStudentCategoryFilter() {
 
 function toggleNewCategoryField() {
   const shouldShow = els.activityCategory.value === "__new__";
-  els.newCategoryField.classList.toggle("hidden", !shouldShow);
+  els.activityCategory.classList.toggle("hidden", shouldShow);
+  els.newCategoryInput.classList.toggle("hidden", !shouldShow);
   if (!shouldShow) {
     els.newCategoryInput.value = "";
+    return;
   }
+  els.newCategoryInput.focus();
+  els.newCategoryInput.select();
 }
 
 function renderActivityLists() {
