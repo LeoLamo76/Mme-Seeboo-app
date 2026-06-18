@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Vocabulary Scene Builder</title>
-    <link rel="stylesheet" href="styles.css?v=20260613-1819">
+    <title>Vocab Learner</title>
+    <link rel="stylesheet" href="styles.css?v=20260615-0824">
   </head>
   <body>
     <div class="app-shell">
@@ -14,7 +14,7 @@
         <section class="screen active" id="menu-screen" aria-labelledby="menu-title">
           <div class="landing-shell">
             <section class="landing-card" aria-labelledby="menu-title">
-              <p class="landing-brand">Vocabulary Scenes</p>
+              <p class="landing-brand">Vocab Learner</p>
               <h1 id="menu-title">Learn Through Discovery</h1>
               <p class="landing-subtitle">Find objects. Learn words. Explore real-world scenes.</p>
 
@@ -33,21 +33,29 @@
               <p class="eyebrow">Teacher</p>
               <h1 id="teacher-gate-title">Teacher access</h1>
               <p class="support-copy">
-                Email sign-in will go here once the final teacher account is confirmed. For now, this is a simple entry step into the builder.
+                Sign in with your teacher email and password. For now, teacher accounts can be created privately in Supabase.
               </p>
 
               <label class="field">
-                <span>Email placeholder</span>
+                <span>Email</span>
                 <input id="teacher-email" type="email" placeholder="teacher@example.com">
               </label>
 
+              <label class="field">
+                <span>Password</span>
+                <input id="teacher-password" type="password" placeholder="Password">
+              </label>
+
+              <p id="auth-status" class="auth-status">Checking session...</p>
+
               <div class="notice-card">
-                <strong>Temporary access</strong>
-                <p>No real sign-in is active yet. This button just opens the teacher builder.</p>
+                <strong>Private teacher access</strong>
+                <p>Only signed-in teacher accounts will be able to enter the builder.</p>
               </div>
 
               <div class="button-column">
-                <button class="primary-button" type="button" id="teacher-continue">Enter Teacher Builder</button>
+                <button class="primary-button" type="button" id="teacher-continue">Sign In</button>
+                <button class="secondary-button hidden" type="button" id="teacher-signout">Sign Out</button>
                 <button class="ghost-button" type="button" data-action="home">Back Home</button>
               </div>
             </section>
@@ -76,7 +84,7 @@
                 <span>Category <small>(optional)</small></span>
                 <div class="category-field-stack">
                   <select id="activity-category">
-                    <option value="">No category</option>
+                    <option value="__new__">New category</option>
                   </select>
                   <input id="new-category-input" class="hidden" type="text" placeholder="New category" aria-label="New category">
                 </div>
@@ -204,19 +212,20 @@
     </div>
 
     <script>
-      fetch("partials/header.html?v=20260613-1819")
+      fetch("partials/header.html?v=20260615-0824")
         .then((response) => {
           if (!response.ok) throw new Error("Header failed to load.");
           return response.text();
         })
         .then((html) => {
           document.querySelector("#site-header").innerHTML = html;
+          window.dispatchEvent(new CustomEvent("header:ready"));
         })
         .catch(() => {
           document.querySelector("#site-header").innerHTML = "";
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=20260613-1819"></script>
+    <script src="app.js?v=20260615-0824"></script>
   </body>
 </html>

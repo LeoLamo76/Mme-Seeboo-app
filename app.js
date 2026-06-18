@@ -2,8 +2,15 @@ const SUPABASE_URL = "https://znxqhbfdfejuuaxjnaso.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpueHFoYmZkZmVqdXVheGpuYXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwOTA4MjUsImV4cCI6MjA5NjY2NjgyNX0.VVRfSPrbMP99ybMSxxHtDQ_yn1k_vxCxBn8cBOHeKV8";
 const SUPABASE_IMAGE_BUCKET = "scene-images";
 
+const browserSessionStorage = typeof window !== "undefined" ? window.sessionStorage : null;
+
 const supabaseClient = window.supabase?.createClient
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      storage: browserSessionStorage
+    }
+  })
   : null;
 
 const state = {
@@ -12,6 +19,15 @@ const state = {
   activitiesError: "",
   studentQuery: "",
   studentNameQuery: "",
+  audio: {
+    context: null
+  },
+  auth: {
+    session: null,
+    user: null,
+    isApproved: false,
+    isLoading: true
+  },
   builder: {
     id: null,
     image: "",
@@ -48,7 +64,10 @@ const els = {
   studentActivityCount: document.querySelector("#student-activity-count"),
   studentLibraryStatus: document.querySelector("#student-library-status"),
   teacherEmail: document.querySelector("#teacher-email"),
+  teacherPassword: document.querySelector("#teacher-password"),
+  authStatus: document.querySelector("#auth-status"),
   teacherContinue: document.querySelector("#teacher-continue"),
+  teacherSignout: document.querySelector("#teacher-signout"),
   activityName: document.querySelector("#activity-name"),
   activityCategory: document.querySelector("#activity-category"),
   newCategoryInput: document.querySelector("#new-category-input"),
@@ -148,6 +167,191 @@ function showScreen(name) {
   if (name === "gameMenu") renderActivityLists();
 }
 
+function getAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!state.audio.context) {
+    state.audio.context = new AudioContextClass();
+  }
+  return state.audio.context;
+}
+
+async function unlockAudio() {
+  const context = getAudioContext();
+  if (!context) return null;
+  if (context.state === "suspended") {
+    try {
+      await context.resume();
+    } catch (_error) {
+      return null;
+    }
+  }
+  return context;
+}
+
+function playTone(context, {
+  frequency,
+  type = "sine",
+  start = 0,
+  duration = 0.08,
+  gain = 0.04,
+  endFrequency = frequency
+}) {
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
+  const now = context.currentTime + start;
+  const endTime = now + duration;
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  oscillator.frequency.linearRampToValueAtTime(endFrequency, endTime);
+
+  gainNode.gain.setValueAtTime(0.0001, now);
+  gainNode.gain.exponentialRampToValueAtTime(gain, now + 0.01);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, endTime);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(endTime);
+}
+
+async function playUiSound(kind) {
+  const context = await unlockAudio();
+  if (!context) return;
+
+  if (kind === "click") {
+    playTone(context, { frequency: 520, type: "triangle", duration: 0.045, gain: 0.018, endFrequency: 420 });
+    return;
+  }
+
+  if (kind === "success") {
+    playTone(context, { frequency: 660, type: "sine", duration: 0.08, gain: 0.03, start: 0 });
+    playTone(context, { frequency: 880, type: "sine", duration: 0.12, gain: 0.035, start: 0.08 });
+    return;
+  }
+
+  if (kind === "retry") {
+    playTone(context, { frequency: 390, type: "sine", duration: 0.09, gain: 0.018, start: 0, endFrequency: 340 });
+    playTone(context, { frequency: 320, type: "sine", duration: 0.11, gain: 0.014, start: 0.07, endFrequency: 280 });
+  }
+}
+
+function getProfileInitial(email) {
+  return (email || "?").trim().charAt(0).toUpperCase() || "?";
+}
+
+function renderHeaderAuthControls() {
+  const headerAuthButton = document.querySelector("#header-auth-button");
+  const headerProfileButton = document.querySelector("#header-profile-button");
+  if (!headerAuthButton || !headerProfileButton) return;
+
+  if (state.auth.user && state.auth.isApproved) {
+    headerAuthButton.textContent = "Build";
+    headerAuthButton.dataset.action = "builder";
+    headerProfileButton.textContent = getProfileInitial(state.auth.user.email);
+    headerProfileButton.title = state.auth.user.email || "Teacher account";
+    headerProfileButton.classList.remove("hidden");
+    return;
+  }
+
+  headerAuthButton.textContent = "Login";
+  headerAuthButton.dataset.action = "teacher-entry";
+  headerProfileButton.classList.add("hidden");
+  headerProfileButton.title = "Teacher account";
+}
+
+function setAuthStatus(message, tone = "") {
+  els.authStatus.textContent = message;
+  els.authStatus.className = `auth-status ${tone}`.trim();
+}
+
+function renderAuthUi() {
+  if (state.auth.isLoading) {
+    els.teacherContinue.disabled = true;
+    els.teacherContinue.textContent = "Checking session...";
+    els.teacherSignout.classList.add("hidden");
+    setAuthStatus("Checking session...");
+    return;
+  }
+
+  if (state.auth.user) {
+    els.teacherContinue.disabled = false;
+    els.teacherContinue.textContent = state.auth.isApproved ? "Open Teacher Builder" : "Access Not Approved";
+    els.teacherSignout.classList.remove("hidden");
+    els.teacherEmail.value = state.auth.user.email || els.teacherEmail.value;
+    els.teacherPassword.value = "";
+    if (state.auth.isApproved) {
+      setAuthStatus(`Signed in as ${state.auth.user.email}.`, "good");
+    } else {
+      setAuthStatus(`${state.auth.user.email} is signed in, but this account is not approved for the builder.`, "bad");
+    }
+    renderHeaderAuthControls();
+    return;
+  }
+
+  els.teacherContinue.disabled = false;
+  els.teacherContinue.textContent = "Sign In";
+  els.teacherSignout.classList.add("hidden");
+  setAuthStatus("Sign in with your teacher account to unlock the builder.");
+  renderHeaderAuthControls();
+}
+
+async function checkTeacherApproval(email) {
+  if (!email) return false;
+  const normalizedEmail = email.trim().toLowerCase();
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("teacher_access")
+    .select("email")
+    .ilike("email", normalizedEmail)
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data?.email);
+}
+
+async function setAuthSession(session) {
+  state.auth.session = session || null;
+  state.auth.user = session?.user || null;
+  state.auth.isApproved = false;
+
+  if (state.auth.user?.email) {
+    try {
+      state.auth.isApproved = await checkTeacherApproval(state.auth.user.email);
+    } catch (error) {
+      setAuthStatus(error.message || "Could not check teacher access.", "bad");
+    }
+  }
+
+  renderAuthUi();
+}
+
+async function initializeAuth() {
+  if (!supabaseClient) {
+    state.auth.isLoading = false;
+    setAuthStatus("Supabase auth failed to load. Refresh and try again.", "bad");
+    els.teacherContinue.disabled = true;
+    return;
+  }
+
+  try {
+    const client = requireSupabase();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    state.auth.isLoading = false;
+    await setAuthSession(data.session);
+    client.auth.onAuthStateChange(async (_event, session) => {
+      state.auth.isLoading = false;
+      await setAuthSession(session);
+    });
+  } catch (error) {
+    state.auth.isLoading = false;
+    await setAuthSession(null);
+    setAuthStatus(error.message || "Could not restore your session.", "bad");
+  }
+}
+
 function parseWords(text) {
   return [...new Set(text.split(/\n|,/).map((word) => word.trim()).filter(Boolean))];
 }
@@ -173,10 +377,10 @@ function renderCategoryOptions(selectedValue = els.activityCategory.value) {
   const currentValue = (selectedValue || "").trim();
   els.activityCategory.innerHTML = "";
 
-  const noneOption = document.createElement("option");
-  noneOption.value = "";
-  noneOption.textContent = categories.length ? "No category" : "No categories yet";
-  els.activityCategory.append(noneOption);
+  const createOption = document.createElement("option");
+  createOption.value = "__new__";
+  createOption.textContent = "New category";
+  els.activityCategory.append(createOption);
 
   categories.forEach((category) => {
     const option = document.createElement("option");
@@ -185,19 +389,11 @@ function renderCategoryOptions(selectedValue = els.activityCategory.value) {
     els.activityCategory.append(option);
   });
 
-  const createOption = document.createElement("option");
-  createOption.value = "__new__";
-  createOption.textContent = "Create new category";
-  els.activityCategory.append(createOption);
-
-  if (currentValue && !categories.includes(currentValue) && currentValue !== "__new__") {
+  if (currentValue && categories.includes(currentValue)) {
+    els.activityCategory.value = currentValue;
+  } else {
     els.activityCategory.value = "__new__";
     els.newCategoryInput.value = currentValue;
-  } else {
-    els.activityCategory.value = currentValue;
-    if (els.activityCategory.value !== currentValue) {
-      els.activityCategory.value = "";
-    }
   }
   toggleNewCategoryField();
 }
@@ -226,16 +422,18 @@ function renderStudentCategoryFilter() {
   }
 }
 
+function showNewCategoryField() {
+  els.newCategoryInput.classList.remove("hidden");
+  els.newCategoryInput.focus();
+}
+
 function toggleNewCategoryField() {
-  const shouldShow = els.activityCategory.value === "__new__";
-  els.activityCategory.classList.toggle("hidden", shouldShow);
-  els.newCategoryInput.classList.toggle("hidden", !shouldShow);
-  if (!shouldShow) {
-    els.newCategoryInput.value = "";
+  if (els.activityCategory.value === "__new__") {
+    showNewCategoryField();
     return;
   }
-  els.newCategoryInput.focus();
-  els.newCategoryInput.select();
+  els.newCategoryInput.classList.add("hidden");
+  els.newCategoryInput.value = "";
 }
 
 function renderActivityLists() {
@@ -358,6 +556,9 @@ function renderActivityList(target, activities, playOnly) {
     const actions = document.createElement("div");
     actions.className = "activity-card-actions";
     actions.append(makeButton("Play", "mini-button", () => openGame(activity.id)));
+    if (playOnly && state.auth.user && state.auth.isApproved) {
+      actions.append(makeButton("Delete", "mini-button danger", () => deleteActivity(activity.id)));
+    }
     if (!playOnly) {
       actions.append(
         makeButton("Edit", "mini-button", () => editActivity(activity.id)),
@@ -397,6 +598,10 @@ function resetBuilder() {
 }
 
 function openTeacherEntry() {
+  if (state.auth.user && state.auth.isApproved) {
+    openTeacherBuilder();
+    return;
+  }
   showScreen("teacherGate");
 }
 
@@ -409,6 +614,16 @@ function openStudentEntry() {
 }
 
 function openTeacherBuilder() {
+  if (!state.auth.user) {
+    showScreen("teacherGate");
+    setAuthStatus("Sign in first to access the teacher builder.", "bad");
+    return;
+  }
+  if (!state.auth.isApproved) {
+    showScreen("teacherGate");
+    setAuthStatus("This signed-in account is not approved for the teacher builder.", "bad");
+    return;
+  }
   resetBuilder();
   showScreen("builder");
 }
@@ -671,6 +886,48 @@ function saveActivity() {
   saveActivityRemote();
 }
 
+async function signInTeacher() {
+  const email = els.teacherEmail.value.trim();
+  const password = els.teacherPassword.value;
+  if (!email || !password) {
+    setAuthStatus("Enter your email and password to sign in.", "bad");
+    return;
+  }
+
+  els.teacherContinue.disabled = true;
+  els.teacherContinue.textContent = "Signing In...";
+  setAuthStatus("Signing you in...");
+
+  try {
+    const client = requireSupabase();
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await setAuthSession(data.session);
+    if (state.auth.isApproved) {
+      openTeacherBuilder();
+    }
+  } catch (error) {
+    setAuthStatus(error.message || "Could not sign in.", "bad");
+  } finally {
+    if (!state.auth.user || !state.auth.isApproved) {
+      els.teacherContinue.disabled = false;
+      els.teacherContinue.textContent = state.auth.user ? "Access Not Approved" : "Sign In";
+    }
+  }
+}
+
+async function signOutTeacher() {
+  try {
+    const client = requireSupabase();
+    const { error } = await client.auth.signOut({ scope: "local" });
+    if (error) throw error;
+    showScreen("teacherGate");
+    setAuthStatus("Signed out.", "good");
+  } catch (error) {
+    setAuthStatus(error.message || "Could not sign out.", "bad");
+  }
+}
+
 async function uploadSceneImage(file) {
   const client = requireSupabase();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -919,6 +1176,7 @@ function handleGameClick(event) {
     if (!state.game.usedShowMe) state.game.score += 1;
     els.feedback.textContent = "Correct.";
     els.feedback.className = "feedback good";
+    playUiSound("success");
     showGamePolygon(matchedTarget.points, "correct");
     state.game.answered = true;
     updateGameStats();
@@ -928,6 +1186,7 @@ function handleGameClick(event) {
 
   els.feedback.textContent = "Try again.";
   els.feedback.className = "feedback bad";
+  playUiSound("retry");
 }
 
 function nextWord() {
@@ -976,7 +1235,23 @@ function escapeHtml(value) {
   })[char]);
 }
 
+function setPressedButton(target) {
+  const button = target?.closest("button");
+  if (!button || button.disabled) return;
+  button.classList.add("is-pressed");
+}
+
+function clearPressedButtons() {
+  document.querySelectorAll("button.is-pressed").forEach((button) => {
+    button.classList.remove("is-pressed");
+  });
+}
+
 document.addEventListener("click", (event) => {
+  if (event.target.closest("button")) {
+    playUiSound("click");
+  }
+
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (!action) return;
 
@@ -987,6 +1262,15 @@ document.addEventListener("click", (event) => {
     openTeacherBuilder();
   }
 });
+
+document.addEventListener("pointerdown", (event) => {
+  setPressedButton(event.target);
+});
+
+document.addEventListener("pointerup", clearPressedButtons);
+document.addEventListener("pointercancel", clearPressedButtons);
+document.addEventListener("dragend", clearPressedButtons);
+window.addEventListener("blur", clearPressedButtons);
 
 document.addEventListener("keydown", (event) => {
   const isUndoShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z";
@@ -1040,7 +1324,14 @@ els.studentNameSearch.addEventListener("input", () => {
   renderActivityLists();
 });
 els.activityCategory.addEventListener("change", toggleNewCategoryField);
-els.teacherContinue.addEventListener("click", openTeacherBuilder);
+els.teacherContinue.addEventListener("click", () => {
+  if (state.auth.user) {
+    openTeacherBuilder();
+    return;
+  }
+  signInTeacher();
+});
+els.teacherSignout.addEventListener("click", signOutTeacher);
 els.showMe.addEventListener("click", showCurrentAnswer);
 els.playAgain.addEventListener("click", () => {
   if (state.game.activity) openGame(state.game.activity.id);
@@ -1070,4 +1361,7 @@ window.addEventListener("resize", () => {
   syncOverlayToImage(els.gameStage, els.gameImage, els.gameOverlays);
 });
 
+window.addEventListener("header:ready", renderHeaderAuthControls);
+
+initializeAuth();
 loadActivities();

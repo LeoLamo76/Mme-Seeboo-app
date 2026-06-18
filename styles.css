@@ -34,6 +34,26 @@ textarea {
 
 button {
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+  transform: translateY(0) scale(1);
+}
+
+button:hover {
+  transform: translateY(-1px) scale(1.01);
+}
+
+button.is-pressed,
+button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+button:disabled {
+  transform: none;
 }
 
 .app-shell {
@@ -100,6 +120,19 @@ button {
   min-height: 48px;
   padding: 0 28px;
   font-size: 18px;
+}
+
+.topbar-profile {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #cdd8ea;
+  border-radius: 999px;
+  background: #f5f8ff;
+  color: #244db5;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .brand-mark {
@@ -455,6 +488,22 @@ main {
   color: var(--muted);
 }
 
+.auth-status {
+  margin: 10px 0 0;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-status.good {
+  color: var(--green);
+}
+
+.auth-status.bad {
+  color: var(--red);
+}
+
 .intro-panel,
 .activity-panel,
 .builder-sidebar,
@@ -645,7 +694,8 @@ main {
 }
 
 .category-field-stack {
-  position: relative;
+  display: grid;
+  gap: 8px;
 }
 
 .field input,
