@@ -110,13 +110,16 @@
               <div class="word-box">
                 <div class="panel-heading">
                   <h2>Words</h2>
-                  <span id="mapped-count">0 mapped</span>
+                  <div class="word-panel-actions">
+                    <span id="mapped-count">0 mapped</span>
+                    <button class="mini-button" type="button" id="toggle-word-queue">Hide</button>
+                  </div>
                 </div>
                 <div id="builder-word-list" class="word-list"></div>
               </div>
 
               <button class="primary-button full" type="button" id="save-activity">Save Activity</button>
-              <p class="helper-text">Click around each object to trace a polygon, then click the first point to close it.</p>
+              <p class="helper-text">Click around an object, then double-click or press Enter to finish. The next word selects itself.</p>
             </aside>
 
             <section class="workspace-panel" aria-label="Image mapping workspace">

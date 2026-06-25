@@ -36,7 +36,8 @@ const state = {
     words: [],
     selectedWord: "",
     pendingPoint: null,
-    draftPolygon: []
+    draftPolygon: [],
+    wordQueueCollapsed: false
   },
   game: {
     activity: null,
@@ -78,6 +79,8 @@ const els = {
   undoPoint: document.querySelector("#undo-point"),
   clearSelected: document.querySelector("#clear-selected"),
   clearBuilder: document.querySelector("#clear-builder"),
+  wordBox: document.querySelector(".word-box"),
+  toggleWordQueue: document.querySelector("#toggle-word-queue"),
   builderWordList: document.querySelector("#builder-word-list"),
   mappedCount: document.querySelector("#mapped-count"),
   selectedWordLabel: document.querySelector("#selected-word-label"),
@@ -581,7 +584,17 @@ function makeButton(label, className, onClick) {
 }
 
 function resetBuilder() {
-  state.builder = { id: null, image: "", imageUrl: "", imageFile: null, words: [], selectedWord: "", pendingPoint: null, draftPolygon: [] };
+  state.builder = {
+    id: null,
+    image: "",
+    imageUrl: "",
+    imageFile: null,
+    words: [],
+    selectedWord: "",
+    pendingPoint: null,
+    draftPolygon: [],
+    wordQueueCollapsed: false
+  };
   els.activityName.value = "";
   els.activityCategory.value = "";
   els.newCategoryInput.value = "";
@@ -640,7 +653,8 @@ function editActivity(id) {
     words: structuredClone(activity.words),
     selectedWord: activity.words[0]?.text || "",
     pendingPoint: null,
-    draftPolygon: []
+    draftPolygon: [],
+    wordQueueCollapsed: false
   };
 
   els.activityName.value = activity.name;
@@ -674,6 +688,8 @@ function setBuilderImage(src, imageUrl = state.builder.imageUrl, imageFile = sta
 
 function renderBuilderWords() {
   els.builderWordList.innerHTML = "";
+  els.wordBox.classList.toggle("collapsed", state.builder.wordQueueCollapsed);
+  els.toggleWordQueue.textContent = state.builder.wordQueueCollapsed ? "Show" : "Hide";
 
   state.builder.words.forEach((word) => {
     const item = document.createElement("button");
@@ -681,19 +697,40 @@ function renderBuilderWords() {
     item.className = `word-item ${word.text === state.builder.selectedWord ? "active" : ""} ${word.targets.length ? "mapped" : ""}`;
     item.innerHTML = `<strong>${escapeHtml(word.text)}</strong><span>${getTargetLabel(word.targets)}</span>`;
     item.addEventListener("click", () => {
-      state.builder.selectedWord = word.text;
-      state.builder.pendingPoint = null;
-      state.builder.draftPolygon = [];
-      renderBuilderWords();
-      renderBuilderOverlays();
-      setBuilderStatus(getBuilderInstruction(word.text));
+      selectBuilderWord(word.text);
     });
     els.builderWordList.append(item);
+
+    if (word.text === state.builder.selectedWord) {
+      requestAnimationFrame(() => {
+        item.scrollIntoView({ block: "nearest" });
+      });
+    }
   });
 
   const mappedCount = getMappedWords().length;
   els.mappedCount.textContent = `${mappedCount} mapped`;
   els.selectedWordLabel.textContent = state.builder.selectedWord || "No word selected";
+}
+
+function selectBuilderWord(wordText, statusMessage = getBuilderInstruction(wordText)) {
+  state.builder.selectedWord = wordText;
+  state.builder.pendingPoint = null;
+  state.builder.draftPolygon = [];
+  renderBuilderWords();
+  renderBuilderOverlays();
+  setBuilderStatus(statusMessage);
+  els.builderStage.focus();
+}
+
+function getNextUnmappedWord(currentWordText) {
+  if (!state.builder.words.length) return null;
+  const currentIndex = state.builder.words.findIndex((word) => word.text === currentWordText);
+  const orderedWords = [
+    ...state.builder.words.slice(currentIndex + 1),
+    ...state.builder.words.slice(0, Math.max(currentIndex + 1, 0))
+  ];
+  return orderedWords.find((word) => !word.targets.length) || null;
 }
 
 function syncOverlayToImage(stage, image, layer) {
@@ -816,46 +853,46 @@ function renderBuilderOverlays() {
 function getTargetLabel(targets) {
   if (!targets.length) return "Needs shape";
   if (targets.length === 1) {
-    return "1 polygon shape";
+    return "1 shape · click to add another";
   }
-  return `${targets.length} shapes marked`;
+  return `${targets.length} shapes · click to add another`;
 }
 
 function addPolygonPoint(point) {
-  if (state.builder.draftPolygon.length >= 3 && isNearFirstPolygonPoint(point)) {
-    finishPolygonShape();
-    return;
-  }
   state.builder.draftPolygon.push({
     x: Number(point.x.toFixed(2)),
     y: Number(point.y.toFixed(2))
   });
   renderBuilderOverlays();
-  setBuilderStatus(`Polygon points for "${state.builder.selectedWord}": ${state.builder.draftPolygon.length}.`);
-}
-
-function isNearFirstPolygonPoint(point) {
-  const firstPoint = state.builder.draftPolygon[0];
-  if (!firstPoint) return false;
-  const dx = point.x - firstPoint.x;
-  const dy = point.y - firstPoint.y;
-  return Math.sqrt((dx * dx) + (dy * dy)) <= 2.5;
+  const count = state.builder.draftPolygon.length;
+  setBuilderStatus(count >= 3
+    ? `${count} points for "${state.builder.selectedWord}". Double-click or press Enter to finish.`
+    : `${count} point${count === 1 ? "" : "s"} for "${state.builder.selectedWord}". Add at least 3.`);
 }
 
 function finishPolygonShape() {
   const selected = state.builder.words.find((word) => word.text === state.builder.selectedWord);
   if (!selected || state.builder.draftPolygon.length < 3) {
-    setBuilderStatus("Add at least 3 points, then click the first point to close the polygon.");
+    setBuilderStatus("Add at least 3 points, then double-click or press Enter to finish.");
     return;
   }
+  const finishedWordText = selected.text;
   selected.targets.push({
     type: "polygon",
     points: structuredClone(state.builder.draftPolygon)
   });
   state.builder.draftPolygon = [];
+  const nextWord = getNextUnmappedWord(finishedWordText);
+  if (nextWord) {
+    selectBuilderWord(
+      nextWord.text,
+      `Saved "${finishedWordText}". Now mark "${nextWord.text}". Click the mapped word again if it needs another zone.`
+    );
+    return;
+  }
   renderBuilderWords();
   renderBuilderOverlays();
-  setBuilderStatus(`Added polygon ${selected.targets.length} for "${selected.text}".`);
+  setBuilderStatus(`Saved "${finishedWordText}". All words have a shape. Click any word to add another zone, or save.`);
 }
 
 function clearSelectedMarkers() {
@@ -1210,7 +1247,9 @@ function showCurrentAnswer() {
 
 function getBuilderInstruction(wordText) {
   if (!wordText) return "Select a word to begin.";
-  return `Click around "${wordText}", then click the first point to close it.`;
+  const selected = state.builder.words.find((word) => word.text === wordText);
+  const extraHint = selected?.targets.length ? " This word already has a shape; draw again to add another zone." : "";
+  return `Click around "${wordText}", then double-click or press Enter to finish.${extraHint}`;
 }
 
 function finishGame() {
@@ -1273,6 +1312,14 @@ document.addEventListener("dragend", clearPressedButtons);
 window.addEventListener("blur", clearPressedButtons);
 
 document.addEventListener("keydown", (event) => {
+  if (screens.builder.classList.contains("active")
+    && document.activeElement === els.builderStage
+    && event.key === "Enter") {
+    event.preventDefault();
+    finishPolygonShape();
+    return;
+  }
+
   const isUndoShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z";
   if (!isUndoShortcut) return;
 
@@ -1309,6 +1356,11 @@ els.loadWords.addEventListener("click", () => {
   setBuilderStatus(state.builder.words.length ? getBuilderInstruction(state.builder.selectedWord) : "Add one word per line.");
 });
 
+els.toggleWordQueue.addEventListener("click", () => {
+  state.builder.wordQueueCollapsed = !state.builder.wordQueueCollapsed;
+  renderBuilderWords();
+});
+
 els.undoPoint.addEventListener("click", () => {
   undoPolygonPoint();
 });
@@ -1339,10 +1391,19 @@ els.playAgain.addEventListener("click", () => {
 
 els.builderStage.addEventListener("click", (event) => {
   if (!state.builder.image || !state.builder.selectedWord) return;
+  if (event.detail > 1) return;
   if (!isPointerInsideImage(event, els.builderStage, els.builderImage)) return;
   els.builderStage.focus();
   const point = eventToPercent(event, els.builderStage, els.builderImage);
   addPolygonPoint(point);
+});
+
+els.builderStage.addEventListener("dblclick", (event) => {
+  if (!state.builder.image || !state.builder.selectedWord) return;
+  if (!isPointerInsideImage(event, els.builderStage, els.builderImage)) return;
+  event.preventDefault();
+  els.builderStage.focus();
+  finishPolygonShape();
 });
 
 els.gameStage.addEventListener("click", handleGameClick);
